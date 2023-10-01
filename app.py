@@ -3,7 +3,6 @@ from flet_core.types import AppView
 
 from stores.chat_store import ChatStore
 from stores.user_store import UserStore
-from components.appbar import AppBar
 from views.chat import ChatView
 
 
@@ -14,7 +13,6 @@ def main(page: ft.Page):
 
     # page setup
     page.title = "Not A Therapist"
-    page.appbar = AppBar(page=page)
     page.theme_mode = ft.ThemeMode.DARK
 
     # FIRST APP LAUNCH

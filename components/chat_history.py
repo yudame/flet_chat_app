@@ -10,6 +10,7 @@ class ChatHistory(ft.Container):
     def __init__(self, page: ft.Page, chat: Chat, user: User):
         super().__init__()
         self.page = page
+        self.expand = 1
 
         # for message in chat.get_history():
         #     if message.author is user:
@@ -28,7 +29,7 @@ class ChatHistory(ft.Container):
         #             )
         #         )
 
-        for i in range(0, 5):
+        for i in range(0, 10):
             self.messages_list.controls.append(
                 ft.Text(f"prompt {i + 1}", text_align=ft.TextAlign.RIGHT, color="blue")
             )
