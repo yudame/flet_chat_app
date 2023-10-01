@@ -25,7 +25,7 @@ class Chat:
         author_user: User,
         message_text: str,
         timestamp: Optional[datetime] = None,
-    ) -> None:
+    ) -> Message:
         message = Message(
             author=author_user,
             message=message_text,
@@ -33,6 +33,7 @@ class Chat:
         )
         self.member_users.add(author_user)
         self.history.append(message)
+        return message
 
     def get_history(self) -> Tuple[Message, ...]:
         return tuple(self.history)

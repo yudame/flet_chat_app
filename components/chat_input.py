@@ -2,6 +2,10 @@ import time
 
 import flet as ft
 
+from components.chat_history import ChatHistory
+from stores.chat_store import Chat
+from stores.user_store import User
+
 
 class ChatInput(ft.Container):
     text_field = ft.TextField(
@@ -17,9 +21,12 @@ class ChatInput(ft.Container):
 
     send_button = ft.IconButton(ft.icons.SEND_ROUNDED)
 
-    def __init__(self, page):
+    def __init__(self, page: ft.Page, chat_history: ChatHistory):
         super().__init__()
         self.page = page
+        self.chat_history = chat_history
+        self.author_user = chat_history.user
+
         self.text_field.on_submit = self.send_message
         self.send_button.on_click = self.send_message
         self.content = ft.Row(
@@ -31,12 +38,14 @@ class ChatInput(ft.Container):
         )
 
     def send_message(self, e: ft.ControlEvent) -> None:
-        message_body = self.text_field.value
+        message_text = self.text_field.value
         self.text_field.disabled = True
         self.text_field.value = "..."
         self.page.update()
 
-        print(f"sending: {message_body}")
+        message = self.chat_history.chat.add_message(author_user=self.author_user, message_text=message_text)
+        self.chat_history.add_message(message)
+        print(f"sending: {message_text}")
 
         self.text_field.disabled = False
         self.text_field.value = ""

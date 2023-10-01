@@ -1,6 +1,6 @@
 import flet as ft
 
-from stores.chat_store import Chat
+from stores.chat_store import Chat, Message
 from stores.user_store import User
 
 
@@ -10,29 +10,41 @@ class ChatHistory(ft.Container):
     def __init__(self, page: ft.Page, chat: Chat, user: User):
         super().__init__()
         self.page = page
-        self.expand = 1
+        self.chat = chat
+        self.user = user
 
-        # for message in chat.get_history():
-        #     if message.author is user:
-        #         self.messages_list.controls.append(
-        #             ft.Text(
-        #                 message.message,
-        #                 text_align=ft.TextAlign.RIGHT,
-        #                 color="blue",
-        #             )
-        #         )
-        #     else:
-        #         self.messages_list.controls.append(
-        #             ft.Text(
-        #                 message.message,
-        #                 text_align=ft.TextAlign.LEFT,
-        #             )
-        #         )
+        # for i in range(0, 10):
+        #     self.messages_list.controls.append(
+        #         ft.Text(f"prompt {i + 1}", text_align=ft.TextAlign.RIGHT, color="blue")
+        #     )
+        #     self.messages_list.controls.append(ft.Text(f"response {i + 1}"))
 
-        for i in range(0, 10):
-            self.messages_list.controls.append(
-                ft.Text(f"prompt {i + 1}", text_align=ft.TextAlign.RIGHT, color="blue")
-            )
-            self.messages_list.controls.append(ft.Text(f"response {i + 1}"))
+        self.load_messages()
 
         self.content = self.messages_list
+        self.expand = 1
+
+    def load_messages(self) -> None:
+        for message in self.chat.get_history():
+            self.add_message(message)
+        self.page.update()
+
+    def add_message(self, message: Message, update_page: bool = True) -> None:
+        if message.author is self.user:
+            self.messages_list.controls.append(
+                ft.Text(
+                    message.message,
+                    text_align=ft.TextAlign.RIGHT,
+                    color="blue",
+                )
+            )
+        else:
+            self.messages_list.controls.append(
+                ft.Text(
+                    message.message,
+                    text_align=ft.TextAlign.LEFT,
+                )
+            )
+
+        if update_page:
+            self.page.update()

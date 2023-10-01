@@ -11,8 +11,16 @@ class ChatView(ft.View):
     def __init__(self, page: ft.Page, chat: Chat, user: User):
         super().__init__()
         self.route = "/chat"
+        self.chat = chat
+        self.user = user
+
+        # COMPONENTS
+        chat_history = ChatHistory(page=page, chat=chat, user=user)
+        chat_input = ChatInput(page=page, chat_history=chat_history)
+
+        # UI
         self.appbar = AppBar(page=page)
         self.controls = [
-            ChatHistory(page=page, chat=chat, user=user),
-            ChatInput(page=page),
+            chat_history,
+            chat_input,
         ]
