@@ -24,14 +24,17 @@ class ChatInput(ft.Container):
     def __init__(self, page: ft.Page, chat_history: ChatHistory):
         super().__init__()
         self.page = page
+
+        self.rail_button = ft.IconButton(ft.icons.MENU_ROUNDED)
         self.chat_history = chat_history
         self.author_user = chat_history.user
 
         self.text_field.on_submit = self.send_message
         self.send_button.on_click = self.send_message
         self.content = ft.Row(
-            spacing=0,
+            spacing=4,
             controls=[
+                self.rail_button,
                 self.text_field,
                 self.send_button,
             ],
