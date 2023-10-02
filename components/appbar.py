@@ -1,5 +1,6 @@
 import flet as ft
-
+import json
+import os
 
 class AppBar(ft.AppBar):
     def __init__(self, page):
@@ -13,17 +14,12 @@ class AppBar(ft.AppBar):
         self.actions = self.get_actions()
 
     def get_title(self):
+        topics = list(json.loads(os.environ.get("AI_CONFIG", "{}")).get("chat_topics", {}).keys())
         return ft.Row(
             [
                 ft.TextButton(
-                    "why live?", on_click=lambda x: print("talk about why live")
-                ),
-                ft.TextButton(
-                    "am i crazy?", on_click=lambda x: print("talk about am i crazy")
-                ),
-                ft.TextButton(
-                    "what to do?", on_click=lambda x: print("talk about what to do")
-                ),
+                    topic_category.title(), on_click=lambda _: print(f"talk about {str(topic_category)}")
+                ) for topic_category in topics
             ]
         )
 
