@@ -1,0 +1,22 @@
+{
+  "chat_topics": {
+    "category_1": {
+      "topic 1": "description",
+      "topic 2": "description"
+    },
+    "category_2": {
+      "topic 1": "description",
+      "topic 2": "description"
+    }
+  },
+  "engagement": {
+    "category_1": {
+      "style 1": "description",
+      "style 2": "description"
+    },
+    "category_2": {
+      "style 1": "description",
+      "style 2": "description"
+    }
+  }
+}
