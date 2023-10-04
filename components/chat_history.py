@@ -12,13 +12,6 @@ class ChatHistory(ft.Container):
         self.page = page
         self.chat = chat
         self.user = user
-
-        # for i in range(0, 10):
-        #     self.messages_list.controls.append(
-        #         ft.Text(f"prompt {i + 1}", text_align=ft.TextAlign.RIGHT, color="blue")
-        #     )
-        #     self.messages_list.controls.append(ft.Text(f"response {i + 1}"))
-
         self.load_messages()
 
         self.content = self.messages_list

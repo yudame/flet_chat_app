@@ -41,15 +41,24 @@ class ChatInput(ft.Container):
         )
 
     def send_message(self, e: ft.ControlEvent) -> None:
-        message_text = self.text_field.value
-        self.text_field.disabled = True
-        self.text_field.value = "..."
-        self.page.update()
-
-        message = self.chat_history.chat.add_message(author_user=self.author_user, message_text=message_text)
-        self.chat_history.add_message(message)
-        print(f"sending: {message_text}")
-
-        self.text_field.disabled = False
+        user_message_text = self.text_field.value
         self.text_field.value = ""
-        self.page.update()
+        self.lock_input()
+
+        user_message = self.chat_history.chat.add_message(author_user=self.author_user, message_text=user_message_text)
+        self.chat_history.add_message(user_message)
+        ai_message = self.chat_history.chat.get_new_ai_message()
+        self.unlock_input()
+
+
+    def lock_input(self, page_update=True):
+        self.text_field.disabled = True
+        self.send_button.disabled = True
+        if page_update:
+            self.page.update()
+
+    def unlock_input(self, page_update=True):
+        self.text_field.disabled = False
+        self.send_button.disabled = False
+        if page_update:
+            self.page.update()

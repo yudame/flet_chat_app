@@ -1,4 +1,4 @@
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import List, Set, Dict, Optional, Tuple, AbstractSet
 from datetime import datetime
 import uuid
@@ -40,6 +40,10 @@ class Chat:
 
     def get_users(self) -> AbstractSet[User]:
         return frozenset(self.member_users)
+
+    def get_new_ai_message(self) -> Message:
+        return self.add_message(author_user=_)
+
 
 
 class ChatStore:
