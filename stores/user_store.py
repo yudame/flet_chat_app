@@ -1,27 +1,60 @@
-from dataclasses import dataclass, replace
+from dataclasses import asdict, dataclass, replace
 from datetime import datetime
+import json
+import logging
+
+import flet as ft
 from typing import Optional, Set
 import uuid
 
+from stores.base_store import BaseStore
 
-@dataclass(frozen=True, slots=True)
+
+@dataclass(slots=True)
 class User:
     id: str
-    username: Optional[str] = None
-    email: Optional[str] = None
+    name: Optional[str] = None
+    handle: Optional[str] = None
     created_at: datetime = datetime.utcnow()
 
+    @property
+    def serialized(self):
+        return json.dumps(asdict(self))
 
-class UserStore:
-    __slots__ = ["user", "contacts"]
 
-    def __init__(self, username: str = None, email: str = None):
-        user_id = str(uuid.uuid4())
-        user_contacts: Set[User] = set()
-        self.user: User = User(id=user_id, username=username, email=email)
+class UserStore(BaseStore):
+    __slots__ = ["page", "user", "contacts"]
 
-    def update_username(self, new_username: str) -> None:
-        self.user = replace(self.user, username=new_username)
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # self.page is provided by the BaseStore class
 
-    def update_email(self, new_email: str) -> None:
-        self.user = replace(self.user, email=new_email)
+        # load user info from client storage
+        self.user = None
+        user_serialized: str = self.page.client_storage.get("user")
+        if user_serialized:
+            try:
+                self.user = User(**json.loads())
+                self.page.client_storage.set("user", self.user.serialized)
+            except:
+                logging.exception(
+                    f"Failed to load user. user_serialized: {user_serialized}"
+                )
+        if not self.user:
+            self.user = User(id=str(uuid.uuid4()))
+
+        # load contacts from client storage
+        self.user_contacts: Set[User] = set()
+        user_contacts_serialized: str = self.page.client_storage.get("user_contacts")
+        if user_contacts_serialized:
+            self.user_contacts: Set[User] = set(
+                [
+                    User(**user_dict)
+                    for user_dict in json.loads(user_contacts_serialized)
+                ]
+            )
+
+    def update_user_attr(self, attr, value):
+        self.user = replace(self.user, **{attr: value})
+        self.page.client_storage.set("user", self.user.serialized)
+        self.page.update()
