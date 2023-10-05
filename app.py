@@ -5,20 +5,25 @@ from flet_core.types import AppView
 
 from stores.chat_store import ChatStore
 from stores.user_store import UserStore
+from stores.ai_store import AIStore
 from views.chat import ChatView
 
 with open("assets/ai_config.json", "r") as f:
     os.environ["AI_CONFIG"] = json.dumps(json.loads(f.read()))
-    if not all([
-        "chat_topics" in os.environ["AI_CONFIG"],
-        "engagement" in os.environ["AI_CONFIG"],
-    ]):
+    if not all(
+        [
+            "chat_topics" in os.environ["AI_CONFIG"],
+            "engagement" in os.environ["AI_CONFIG"],
+        ]
+    ):
         raise ValueError("AI_CONFIG is missing required keys")
+
 
 def main(page: ft.Page):
     # stores
-    user_store = UserStore()
-    chat_store = ChatStore()
+    user_store = UserStore(page=page)
+    chat_store = ChatStore(page=page)
+    ai_store = AIStore(page=page)
 
     # page setup
     page.title = "Not A Therapist"
