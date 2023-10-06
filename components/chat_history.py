@@ -18,7 +18,7 @@ class ChatHistory(ft.Container):
         self.expand = 1
 
     def load_messages(self) -> None:
-        for message in self.chat.get_history():
+        for message in self.chat.get_message_history():
             self.add_message(message)
         self.page.update()
 

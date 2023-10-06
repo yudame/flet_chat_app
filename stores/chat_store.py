@@ -21,12 +21,12 @@ class Message:
 
 
 class Chat:
-    __slots__ = ["page", "id", "member_users", "messages"]
+    __slots__ = ["page", "id", "member_user_ids", "messages"]
 
     def __init__(self, page: ft.Page):
         self.page: ft.Page = page
         self.id: str = str(uuid.uuid4())
-        self.member_users: Set[User] = set()
+        self.member_user_ids: Set[str] = set()
         self.messages: List[Message] = []
 
     def add_message(
@@ -40,25 +40,30 @@ class Chat:
             message=message_text,
             timestamp=timestamp or datetime.utcnow(),
         )
-        self.member_users.add(author_user)
+        self.member_user_ids.add(str(author_user.id))
         self.messages.append(message)
         return message
 
-    def get_history(self) -> Tuple[Message, ...]:
+    def get_message_history(self) -> Tuple[Message, ...]:
         return tuple(self.messages)
 
-    def get_users(self) -> AbstractSet[User]:
-        return frozenset(self.member_users)
+    def get_history_as_text(self) -> str:
+        return "\n".join(
+            [f"{m.author.name}: {m.message}" for m in self.get_message_history()]
+        )
+
+    def get_users(self) -> AbstractSet[str]:
+        return frozenset(self.member_user_ids)
 
     def get_new_ai_message(self) -> Message:
-        return self.add_message(author_user=self.page.ai_user, message_text="")
+        return self.add_message(author_user=self.page.ai_store.ai_user, message_text="")
 
     @property
     def serialized(self):
         return json.dumps(
             {
                 "id": self.id,
-                "member_users": [user.serialized for user in self.member_users],
+                "member_user_ids": [user.serialized for user in self.member_user_ids],
                 "messages": [message.serialized for message in self.messages],
             }
         )

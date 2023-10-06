@@ -1,19 +1,20 @@
 from dataclasses import dataclass
+from datetime import datetime
 import json
 import logging
 import os
-from typing import List, Set, Dict, Optional, Tuple, AbstractSet
-from datetime import datetime
-import uuid
-import flet as ft
-from langchain import PromptTemplate
+from typing import Dict, List
+
 from langchain.callbacks import get_openai_callback
 from langchain.chains import ConversationChain
 from langchain.chat_models import ChatOpenAI
 from langchain.memory import ConversationBufferMemory
-from langchain.prompts import ChatPromptTemplate
+from langchain.prompts import PromptTemplate
+from langchain.schema import HumanMessage, AIMessage, BaseMessage
 
 from stores.base_store import BaseStore
+from stores.chat_store import Chat
+from stores.user_store import User
 
 
 @dataclass(frozen=True, slots=True)
@@ -45,95 +46,41 @@ class AIStore(BaseStore):
         self.openai_api_org: str = openai_api_config.get("org_id")
         self.openai_api_model: str = openai_api_config.get("model")
 
-        from langchain.chat_models import ChatOpenAI
-
         self.llm = ChatOpenAI(
             openai_api_key=self.openai_api_key,
             openai_organization=self.openai_api_org,
             model_name=self.openai_api_model,
-            temperature=0.5,
+            temperature=0,
         )
 
-        ai_role = AIRole(**ai_config.get("ai_role", {}))
-
-        chat_prompt = ChatPromptTemplate.from_messages(
-            [
-                ("system", ai_role.intro),
-                ("human", "{text}"),
-            ]
+        # Define the behavior instruction for the chat model
+        self.ai_role = AIRole(**ai_config.get("ai_role", {}))
+        self.ai_user = User(id=self.ai_role.name, name=self.ai_role.name)
+        behavior_instruction = self.ai_role.intro + (
+            "\n\n" "Current conversation:\n" "{history}\n" "Human: {input}\n"
         )
 
-        self.conversation_chain = ConversationChain(
-            llm=self.llm,
-            memory=ConversationBufferMemory(
-                # ai_prefix=bot_name, human_prefix=human_name
-            ),
-        )
-        self.conversation_chain.prompt = PromptTemplate(
-            input_variables=["messages", "input"],
-            template=CONVERSATION_TEMPLATE.format(
-                # human_name=self.human_name,
-                # bot_name=self.bot_name,
-                input="{input}",
-                history="{messages}",
-            ),
-        )
-        self.conversation_chain.prep_prompts(
-            [
-                {
-                    "input": "{input}",
-                    f"messages": (prev_history + "\n" if prev_history else "")
-                    + "{messages}",
-                },
-            ]
+        # Create a PromptTemplate instance with history and input variables
+        prompt_template = PromptTemplate(
+            input_variables=["history", "input"], template=behavior_instruction
         )
 
-    @property
-    def history_as_text(self) -> str:
-        return "\n".join(
-            [
-                ("Human: " if m.type == "human" else "AI: ") + m.content
-                for m in self.conversation_chain.memory.chat_memory.messages
-            ]
+        # Initialize the conversation chain with the formatted prompt template
+        memory = ConversationBufferMemory()
+        self.conversation = ConversationChain(
+            llm=self.llm, prompt=prompt_template, memory=memory
         )
 
-    def prompt(self, prompt_text: str):
-        with get_openai_callback() as cb:
-            result: str = self.conversation_chain.run(
-                {
-                    "messages": self.history_as_text,
-                    "input": prompt_text,
-                }
-            )
-            logging.info(f"Spent a total of {cb.total_tokens} tokens")
-        return result
+    def prompt(self, chat: Chat, prompt_text: str, user: User) -> str:
+        # Convert past messages to a string format for the history variable
+        history = "\n".join(
+            f"{message.author.name}: {message.message}"
+            for message in chat.get_message_history()
+        )
 
-    def to_dict(self):
-        return {
-            "keep_context": self.keep_context,
-            "summarize_context": self.summarize_context,
-            "bot_name": self.bot_name,
-            "human_name": self.human_name,
-            "prev_history": self.history_as_text,
-        }
+        ai_text_response: str = self.conversation.predict(
+            input=prompt_text, history=history
+        )
 
-    def get_new_ai_message(self):
-        pass
-
-    @classmethod
-    def from_dict(cls, data):
-        return cls(**data)
-
-
-CONVERSATION_TEMPLATE = """
-The following is a productive and efficient conversation between {human_name} and {bot_name}. 
-{human_name} leads the conversation and informs {bot_name} on what is important to talk about.
-{bot_name} is kind and provides lots of specific details on subjects it knows about. 
-If {bot_name} does not know the answer to a question, it honestly admits that it does not know. 
-It may provide a good guess and note that it's just a guess.
-
-Current conversation:
-{messages}
-{human_name}: {input}
-{bot_name}:
-"""
+        print(ai_text_response)
+        return ai_text_response

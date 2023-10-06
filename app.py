@@ -8,6 +8,7 @@ from stores.user_store import UserStore
 from stores.ai_store import AIStore
 from views.chat import ChatView
 
+
 with open("assets/ai_config.json", "r") as f:
     os.environ["AI_CONFIG"] = json.dumps(json.loads(f.read()))
     if not all(
@@ -20,24 +21,23 @@ with open("assets/ai_config.json", "r") as f:
 
 
 def main(page: ft.Page):
-    # stores
-    user_store = UserStore(page=page)
-    chat_store = ChatStore(page=page)
-    ai_store = AIStore(page=page)
+    # add storages
+    page.user_store = UserStore(page=page)
+    page.chat_store = ChatStore(page=page)
+    page.ai_store = AIStore(page=page)
 
-    # page setup
     page.title = "Not A Therapist"
     page.theme_mode = ft.ThemeMode.DARK
 
     # FIRST APP LAUNCH
     # 1. create new chat
-    first_chat = chat_store.new_chat()
+    first_chat = page.chat_store.new_chat()
     # 2. start chatting
     page.views.append(
         ChatView(
             page=page,
             chat=first_chat,
-            user=user_store.user,
+            user=page.user_store.user,
         )
     )
 

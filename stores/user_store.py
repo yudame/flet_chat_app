@@ -2,8 +2,6 @@ from dataclasses import asdict, dataclass, replace
 from datetime import datetime
 import json
 import logging
-
-import flet as ft
 from typing import Optional, Set
 import uuid
 
@@ -13,7 +11,7 @@ from stores.base_store import BaseStore
 @dataclass(slots=True)
 class User:
     id: str
-    name: Optional[str] = None
+    name: str = "Human"
     handle: Optional[str] = None
     created_at: datetime = datetime.utcnow()
 
