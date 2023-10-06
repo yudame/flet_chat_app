@@ -1,4 +1,14 @@
 {
+  "openai_api":  {
+    "api_key":  "",
+    "org_id":  "",
+    "model": "gpt-3.5-turbo"
+  },
+  "ai_role": {
+    "title": "general assistant",
+    "name": "AI Bot",
+    "intro": "The following is a productive and efficient conversation between a human and an AI bot.\nThe human leads the conversation and informs the bot on what is important to talk about.\nThe bot is kind and provides lots of specific details on subjects it knows about.\nIf the bot does not know the answer to a question, it honestly admits that it does not know.\nIt may provide a good guess and note that it's just a guess."
+  },
   "chat_topics": {
     "category_1": {
       "topic 1": "description",
