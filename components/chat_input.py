@@ -1,10 +1,7 @@
-import time
-
 import flet as ft
 
 from components.chat_history import ChatHistory
-from stores.chat_store import Chat, Message
-from stores.user_store import User
+from stores.chat_store import Message
 
 
 class ChatInput(ft.Container):
@@ -53,16 +50,11 @@ class ChatInput(ft.Container):
         self.chat_history_container.add_message(user_message)
 
         # get response text from ai
-        ai_message_text: str = self.page.ai_store.prompt(
-            chat=self.chat_history_container.chat,
-            prompt_text=user_message.message,
-            user=self.author_user,
-        )
-        ai_message: Message = self.chat_history_container.chat.add_message(
-            author_user=self.page.ai_store.ai_user, message_text=ai_message_text
-        )
+        self.page.ai_store.get_next_message(chat=self.chat_history_container.chat)
         # display ai response on screen
-        self.chat_history_container.add_message(ai_message)
+        if self.chat_history_container.chat.messages[-1].author is not self.author_user:
+            ai_message: Message = self.chat_history_container.chat.messages[-1]
+            self.chat_history_container.add_message(ai_message)
 
         # unlock the user
         self.unlock_input()

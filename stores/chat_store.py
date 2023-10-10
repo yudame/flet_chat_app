@@ -21,13 +21,14 @@ class Message:
 
 
 class Chat:
-    __slots__ = ["page", "id", "member_user_ids", "messages"]
+    __slots__ = ["page", "id", "member_user_ids", "messages", "summary"]
 
     def __init__(self, page: ft.Page):
         self.page: ft.Page = page
         self.id: str = str(uuid.uuid4())
         self.member_user_ids: Set[str] = set()
         self.messages: List[Message] = []
+        self.summary: str = ""
 
     def add_message(
         self,
@@ -44,13 +45,11 @@ class Chat:
         self.messages.append(message)
         return message
 
-    def get_message_history(self) -> Tuple[Message, ...]:
-        return tuple(self.messages)
+    def get_history_as_message_list(self) -> List[Dict[str, str]]:
+        return [{"role": m.author.name, "content": m.message} for m in self.messages]
 
     def get_history_as_text(self) -> str:
-        return "\n".join(
-            [f"{m.author.name}: {m.message}" for m in self.get_message_history()]
-        )
+        return "\n".join([f"{m.author.name}: {m.message}" for m in self.messages])
 
     def get_users(self) -> AbstractSet[str]:
         return frozenset(self.member_user_ids)

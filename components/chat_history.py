@@ -18,7 +18,14 @@ class ChatHistory(ft.Container):
         self.expand = 1
 
     def load_messages(self) -> None:
-        for message in self.chat.get_message_history():
+        # init with first message if empty
+        if not len(self.chat.messages):
+            self.chat.add_message(
+                author_user=self.page.ai_store.ai_user,
+                message_text=self.page.ai_store.ai_role.first_message,
+            )
+        # add all messages to the screen
+        for message in self.chat.messages:
             self.add_message(message)
         self.page.update()
 
