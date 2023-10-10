@@ -1,13 +1,14 @@
 from dataclasses import dataclass
 from datetime import datetime
-from typing import List
-
+from typing import List, Optional
+from icecream import ic
 from langchain.chat_models import ChatOpenAI
 
 from settings import AI_CONFIG
 from stores.base_store import BaseStore
 from stores.chat_store import Chat
 from stores.user_store import User
+from utils import dict_to_cheat_sheet
 
 
 @dataclass(frozen=True, slots=True)
@@ -50,18 +51,15 @@ class AIStore(BaseStore):
         self.system_user = User(id="system", name="system")
         self.conversation_start_message_list = [
             {"role": "system", "content": self.ai_role.intro},
-            # {"role": "user", "content": "Hello, I'd like to talk."},
-            {
-                "role": self.ai_role.title,
-                "content": self.ai_first_message,
-            },
         ]
 
     def _validate_config(self):
         openai_api_config = AI_CONFIG.get("openai_api", {})
         ai_steps = AI_CONFIG.get(
             "ai_steps",
-            {"response": "predict the next message using 5 sentences or less"},
+            {
+                "response": "predict the next message using 5 sentences or less",
+            },
         )
         assert (
             "response" in ai_steps
@@ -80,11 +78,14 @@ class AIStore(BaseStore):
         # Define the behavior instruction for the chat model
         self.ai_role = AIRole(**AI_CONFIG.get("ai_role", {}))
         self.ai_steps: dict = AI_CONFIG.get("ai_steps", {})
-        self.ai_first_message = AI_CONFIG.get(
-            "ai_first_message", "Hi, where should we start?"
-        )
 
-    def prompt(self, chat: Chat, system_prompt: str, mode: str = "chat") -> str:
+    def prompt(
+        self,
+        chat: Chat,
+        system_prompt: str,
+        mode: str = "chat",
+        max_tokens: Optional[int] = 90,  # 90 is about 3 long sentences
+    ) -> str:
         messages_list: List = []
         # load summary if exists
         if chat.summary:
@@ -108,13 +109,16 @@ class AIStore(BaseStore):
 
         match mode:
             case "planning":
-                ai_text_response = self.planning_llm.predict(full_message_text)
+                ai_text_response = self.planning_llm.predict(
+                    full_message_text, max_tokens=max_tokens
+                )
             case "chat":
-                ai_text_response = self.chat_llm.predict(full_message_text)
+                ai_text_response = self.chat_llm.predict(
+                    full_message_text, max_tokens=max_tokens
+                )
             case _:
                 raise ValueError(f"Invalid mode: {mode}")
 
-        print(ai_text_response)
         return ai_text_response
 
     def _take_planning_steps(self, chat: Chat):
@@ -122,12 +126,38 @@ class AIStore(BaseStore):
         for step_name, step_description in list(self.ai_steps.items())[
             :-1
         ]:  # Skip the last step
+            system_prompt = (
+                f"Now you, {self.ai_user.name}, "
+                f"consider where we are regarding {step_name}. {step_description}"
+            )
+            if step_name in AI_CONFIG:
+                # flatten the AI_CONFIG[step_name] dict into a string
+                cheat_sheet: str = dict_to_cheat_sheet(AI_CONFIG[step_name])
+                system_prompt += (
+                    f"Use this cheat sheet to chose from:\n\n{cheat_sheet}\n\n"
+                )
+
+            if step_name == "practice":
+                max_tokens = 120
+            else:
+                max_tokens = 30
+                system_prompt += (
+                    "Be concise. Write a note to yourself using only a few words."
+                )
+
+            # ic(system_prompt)
+
             ai_text_response = self.prompt(
-                chat=chat, system_prompt=step_description, mode="planning"
+                chat=chat,
+                system_prompt=system_prompt,
+                mode="planning",
+                max_tokens=max_tokens,
             )
             step_response_additions.append(ai_text_response)
-            chat.add_message(self.ai_user, ai_text_response)
-            # stop forcing the prompt method to keep recompiling the history
+            ic(ai_text_response)
+            chat.add_message(
+                self.system_user, f"your notes on {step_name}:\n{ai_text_response}\n"
+            )
 
     def get_next_message(self, chat: Chat):
         self._take_planning_steps(chat=chat)

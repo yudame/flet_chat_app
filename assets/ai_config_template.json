@@ -15,6 +15,7 @@
     "step_1_concept":  "Instructions for Step 1, given to AI role",
     "step_2_concept":  "Instructions for Step 2, given to AI role",
     "step_N_concept":  "Instructions for Step N, given to AI role",
+    "practice": "Given where the conversation has gone so far, jot down some ideas on what do say next.",
     "response": "Final instruction to generate the response.  This will be the only output seen by users."
   },
   "step_1_concept": {
