@@ -1,23 +1,11 @@
-import json
-import os
 import flet as ft
 from flet_core.types import AppView
 
+import settings
 from stores.chat_store import ChatStore
 from stores.user_store import UserStore
 from stores.ai_store import AIStore
 from views.chat import ChatView
-
-
-with open("assets/ai_config.json", "r") as f:
-    os.environ["AI_CONFIG"] = json.dumps(json.loads(f.read()))
-    if not all(
-        [
-            "chat_topics" in os.environ["AI_CONFIG"],
-            "engagement" in os.environ["AI_CONFIG"],
-        ]
-    ):
-        raise ValueError("AI_CONFIG is missing required keys")
 
 
 def main(page: ft.Page):
@@ -26,7 +14,7 @@ def main(page: ft.Page):
     page.chat_store = ChatStore(page=page)
     page.ai_store = AIStore(page=page)
 
-    page.title = "Not A Therapist"
+    page.title = settings.APP_CONFIG["title"]
     page.theme_mode = ft.ThemeMode.DARK
 
     # FIRST APP LAUNCH
@@ -46,10 +34,10 @@ def main(page: ft.Page):
 
 
 ft.app(
-    name="Not A Therapist App by Official",
+    name=settings.APP_CONFIG["name"],
     view=AppView.FLET_APP,
-    assets_dir="assets",
-    upload_dir="assets/uploads",
+    assets_dir=settings.APP_CONFIG["assets_dir"],
+    upload_dir=settings.APP_CONFIG["upload_dir"],
     use_color_emoji=True,
     target=main,
 ),
