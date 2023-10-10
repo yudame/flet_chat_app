@@ -1,17 +1,10 @@
 from dataclasses import dataclass
 from datetime import datetime
-import json
-import logging
-import os
-from typing import Dict, List
+from typing import List
 
-from langchain.callbacks import get_openai_callback
-from langchain.chains import ConversationChain
 from langchain.chat_models import ChatOpenAI
-from langchain.memory import ConversationBufferMemory
-from langchain.prompts import PromptTemplate
-from langchain.schema import HumanMessage, AIMessage, BaseMessage
 
+from settings import AI_CONFIG
 from stores.base_store import BaseStore
 from stores.chat_store import Chat
 from stores.user_store import User
@@ -30,6 +23,7 @@ class AIRole:
     name: str
     title: str
     intro: str
+    first_message: str
 
 
 class AIStore(BaseStore):
@@ -38,49 +32,112 @@ class AIStore(BaseStore):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         # self.page is provided by the BaseStore class
+        self._validate_config()
+        self.planning_llm = ChatOpenAI(
+            openai_api_key=self.openai_api_key,
+            openai_organization=self.openai_api_org,
+            model_name=self.open_ai_planning_model,
+            temperature=0.1,
+        )
+        self.chat_llm = ChatOpenAI(
+            openai_api_key=self.openai_api_key,
+            openai_organization=self.openai_api_org,
+            model_name=self.openai_api_chat_model,
+            temperature=0.7,
+        )
 
-        ai_config: Dict = json.loads(os.environ.get("AI_CONFIG"))
-        openai_api_config = ai_config.get("openai_api", {})
+        self.ai_user = User(id=self.ai_role.name, name=self.ai_role.name)
+        self.system_user = User(id="system", name="system")
+        self.conversation_start_message_list = [
+            {"role": "system", "content": self.ai_role.intro},
+            # {"role": "user", "content": "Hello, I'd like to talk."},
+            {
+                "role": self.ai_role.title,
+                "content": self.ai_first_message,
+            },
+        ]
+
+    def _validate_config(self):
+        openai_api_config = AI_CONFIG.get("openai_api", {})
+        ai_steps = AI_CONFIG.get(
+            "ai_steps",
+            {"response": "predict the next message using 5 sentences or less"},
+        )
+        assert (
+            "response" in ai_steps
+        ), "openai_api_config.ai_steps is missing required key 'response'"
 
         self.openai_api_key: str = openai_api_config.get("api_key")
         self.openai_api_org: str = openai_api_config.get("org_id")
-        self.openai_api_model: str = openai_api_config.get("model")
-
-        self.llm = ChatOpenAI(
-            openai_api_key=self.openai_api_key,
-            openai_organization=self.openai_api_org,
-            model_name=self.openai_api_model,
-            temperature=0,
+        default_model: str = openai_api_config.get("default_model")
+        self.openai_api_chat_model: str = (
+            openai_api_config.get("chat_model") or default_model
+        )
+        self.open_ai_planning_model: str = (
+            openai_api_config.get("planning_model") or default_model
         )
 
         # Define the behavior instruction for the chat model
-        self.ai_role = AIRole(**ai_config.get("ai_role", {}))
-        self.ai_user = User(id=self.ai_role.name, name=self.ai_role.name)
-        behavior_instruction = self.ai_role.intro + (
-            "\n\n" "Current conversation:\n" "{history}\n" "Human: {input}\n"
+        self.ai_role = AIRole(**AI_CONFIG.get("ai_role", {}))
+        self.ai_steps: dict = AI_CONFIG.get("ai_steps", {})
+        self.ai_first_message = AI_CONFIG.get(
+            "ai_first_message", "Hi, where should we start?"
         )
 
-        # Create a PromptTemplate instance with history and input variables
-        prompt_template = PromptTemplate(
-            input_variables=["history", "input"], template=behavior_instruction
+    def prompt(self, chat: Chat, system_prompt: str, mode: str = "chat") -> str:
+        messages_list: List = []
+        # load summary if exists
+        if chat.summary:
+            messages_list.append(
+                {
+                    "role": "system",
+                    "content": f"Here is a summary of conversation until now: {chat.summary}",
+                }
+            )
+        else:
+            messages_list += self.conversation_start_message_list
+        # add all message history until now
+        messages_list += chat.get_history_as_message_list()
+        # add next step
+        messages_list.append({"role": "system", "content": system_prompt})
+
+        # convert to text
+        full_message_text: str = "\n".join(
+            [f"{message['role']}: {message['content']}" for message in messages_list]
         )
 
-        # Initialize the conversation chain with the formatted prompt template
-        memory = ConversationBufferMemory()
-        self.conversation = ConversationChain(
-            llm=self.llm, prompt=prompt_template, memory=memory
-        )
-
-    def prompt(self, chat: Chat, prompt_text: str, user: User) -> str:
-        # Convert past messages to a string format for the history variable
-        history = "\n".join(
-            f"{message.author.name}: {message.message}"
-            for message in chat.get_message_history()
-        )
-
-        ai_text_response: str = self.conversation.predict(
-            input=prompt_text, history=history
-        )
+        match mode:
+            case "planning":
+                ai_text_response = self.planning_llm.predict(full_message_text)
+            case "chat":
+                ai_text_response = self.chat_llm.predict(full_message_text)
+            case _:
+                raise ValueError(f"Invalid mode: {mode}")
 
         print(ai_text_response)
+        return ai_text_response
+
+    def _take_planning_steps(self, chat: Chat):
+        step_response_additions = []
+        for step_name, step_description in list(self.ai_steps.items())[
+            :-1
+        ]:  # Skip the last step
+            ai_text_response = self.prompt(
+                chat=chat, system_prompt=step_description, mode="planning"
+            )
+            step_response_additions.append(ai_text_response)
+            chat.add_message(self.ai_user, ai_text_response)
+            # stop forcing the prompt method to keep recompiling the history
+
+    def get_next_message(self, chat: Chat):
+        self._take_planning_steps(chat=chat)
+
+        final_system_prompt = self.ai_steps.get(
+            "response", "take a deep breath and prepare your best response"
+        )
+        ai_text_response = self.prompt(
+            chat=chat, system_prompt=final_system_prompt, mode="chat"
+        )
+
+        chat.add_message(self.ai_user, ai_text_response)
         return ai_text_response
