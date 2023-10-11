@@ -152,4 +152,9 @@ cython_debug/
 #.idea/
 .DS_Store
 .idea/
+
+
+# owner config files
 assets/ai_config.json
+generated-*
+scripts/package_mac_app.sh
