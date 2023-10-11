@@ -5,7 +5,7 @@ from icecream import ic
 from langchain.chat_models import ChatOpenAI
 import openai
 
-from settings import AI_CONFIG
+from settings.settings import AI_CONFIG
 from stores.base_store import BaseStore
 from stores.chat_store import Chat
 from stores.user_store import User

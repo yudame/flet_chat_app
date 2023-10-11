@@ -5,7 +5,7 @@ from typing import Dict
 AI_CONFIG: Dict = {}
 
 try:
-    with open("assets/ai_config.json", "r") as f:
+    with open("settings/ai_config.json", "r") as f:
         AI_CONFIG = json.loads(f.read())
 except FileNotFoundError:
     print(

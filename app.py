@@ -1,7 +1,7 @@
 import flet as ft
 from flet_core.types import AppView
 
-import settings
+from settings.settings import APP_CONFIG
 from stores.chat_store import ChatStore
 from stores.user_store import UserStore
 from stores.ai_store import AIStore
@@ -14,7 +14,7 @@ def main(page: ft.Page):
     page.chat_store = ChatStore(page=page)
     page.ai_store = AIStore(page=page)
 
-    page.title = settings.APP_CONFIG["title"]
+    page.title = APP_CONFIG["title"]
     page.theme_mode = ft.ThemeMode.DARK
 
     # FIRST APP LAUNCH
@@ -34,10 +34,10 @@ def main(page: ft.Page):
 
 
 ft.app(
-    name=settings.APP_CONFIG["name"],
+    name=APP_CONFIG["name"],
     view=AppView.FLET_APP,
-    assets_dir=settings.APP_CONFIG["assets_dir"],
-    upload_dir=settings.APP_CONFIG["upload_dir"],
+    assets_dir=APP_CONFIG["assets_dir"],
+    upload_dir=APP_CONFIG["upload_dir"],
     use_color_emoji=True,
     target=main,
 ),
